@@ -1,27 +1,28 @@
+mermaid_code = """
 flowchart TD
 
 %% Stage 1: Environment & Core Setup
-A1[🛠️ Stage 1: Setup & Init\n- Python venv setup\n- Install dependencies\n- Load API keys\n- Select & test LLM]
+A1[🛠️ Stage 1: Setup & Init\\n- Python venv setup\\n- Install dependencies\\n- Load API keys\\n- Select & test LLM]
 
 %% Stage 2: Intent Definition & Structured Output
-A2[🧭 Stage 2: Intent & Structure\n- Define Pydantic schema\n- Create Output Parser\n- Build Prompt Template]
+A2[🧭 Stage 2: Intent & Structure\\n- Define Pydantic schema\\n- Create Output Parser\\n- Build Prompt Template]
 
 %% Stage 3: Tool Integration
-A3[🧰 Stage 3: Tool Integration\n- Search Tool (DuckDuckGo)\n- Wiki Tool\n- Custom Tool]
+A3[🧰 Stage 3: Tool Integration\\n- Search Tool (DuckDuckGo)\\n- Wiki Tool\\n- Custom Tool]
 
 %% Stage 4: Agent Execution
-A4[🤖 Stage 4: Agent Execution\n- Assemble Agent (LLM + Prompt + Tools)\n- Initialize AgentExecutor]
+A4[🤖 Stage 4: Agent Execution\\n- Assemble Agent (LLM + Prompt + Tools)\\n- Initialize AgentExecutor]
 
 %% Parallel Branch: User Query and Agent Decision
-B1[👤 User Query Input\n- User enters research topic]
-B2[🧠 Agent Decision Logic\n- Agent selects relevant tools]
+B1[👤 User Query Input\\n- User enters research topic]
+B2[🧠 Agent Decision Logic\\n- Agent selects relevant tools]
 
 %% Parallel Branch: Tool Execution and Parsing
-C1[🔍 Tool Execution\n- Fetch info from search/wiki/custom tools]
-C2[🧾 Response Parsing\n- Convert raw output to structured object]
+C1[🔍 Tool Execution\\n- Fetch info from search/wiki/custom tools]
+C2[🧾 Response Parsing\\n- Convert raw output to structured object]
 
 %% Final Output
-D1[📊 Final Structured Output\n- structured_response.topic\n- Save or use downstream]
+D1[📊 Final Structured Output\\n- structured_response.topic\\n- Save or use downstream]
 
 %% Connections
 A1 --> A2
@@ -34,5 +35,29 @@ B2 --> C1
 B2 --> C2
 C1 --> D1
 C2 --> D1
+"""
 
+html_template = f"""
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Mermaid Flowchart Render</title>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({{ startOnLoad: true }});
+  </script>
+</head>
+<body>
+  <h2>Flowchart Rendered from Mermaid Code</h2>
+  <div class="mermaid">
+{mermaid_code}
+  </div>
+</body>
+</html>
+"""
 
+with open("flowchart.html", "w", encoding="utf-8") as f:
+    f.write(html_template)
+
+print("Flowchart HTML file has been created. Open 'flowchart.html' in your browser to view the diagram.")
