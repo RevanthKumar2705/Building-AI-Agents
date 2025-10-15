@@ -1,45 +1,47 @@
-### Building Agent
+### 🧠 Building AI Research Assistant Agent
 
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
-from langchain_anthropic import ChatAnthropic
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import PydanticOutputParser  
+from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
-from tools import search_tool, wiki_tool, save_tool
+from langchain.tools import Tool
+from langchain_community.tools import WikipediaQueryRun, DuckDuckGoSearchRun
+from langchain_community.utilities import WikipediaAPIWrapper
+from datetime import datetime
 
-
-
-
+# ============================
+# 🌿 1. Load environment
+# ============================
 load_dotenv()
 
-### Creating python class for output schema and inheriting from BaseModel
-
+# ============================
+# 🧱 2. Define Output Schema
+# ============================
 class ResearchResponse(BaseModel):
     topic: str
     summary: str
     sources: list[str]
     tools_used: list[str]
 
-
-
-### Setting LLM
-
+# ============================
+# 🧠 3. LLM Configuration
+# ============================
 llm = ChatOpenAI(model="gpt-4o-mini")
-
-### Output of LLM should be in the format of ResearchResponse class
 
 parser = PydanticOutputParser(pydantic_object=ResearchResponse)
 
 prompt = ChatPromptTemplate.from_messages(
     [
         (
-            "system", ## msg to llm
+            "system",
             """
-            You are a research assistant that will help generate a research paper.
-            Answer the user query and use neccessary tools. 
-            Wrap the output in this format and provide no other text\n{format_instructions}
+            You are a research assistant.
+            Always provide the final answer strictly in valid JSON format as per the schema.
+            Use tools when needed but make sure the last message is only the structured JSON output.
+            Do not add any extra text, explanation, or markdown.
+            {format_instructions}
             """,
         ),
         ("placeholder", "{chat_history}"),
@@ -48,42 +50,70 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 ).partial(format_instructions=parser.get_format_instructions())
 
+# ============================
+# 🔧 4. Define Tools
+# ============================
+# Search tool
+search = DuckDuckGoSearchRun()
+search_tool = Tool(
+    name="Search",
+    func=search.run,
+    description="Search the web for recent information."
+)
 
-tools = [search_tool, wiki_tool, save_tool]
+# Wikipedia tool
+api_wrapper = WikipediaAPIWrapper(top_k_results=1, doc_content_chars_max=100)
+wiki_tool = WikipediaQueryRun(api_wrapper=api_wrapper)
+
+# Custom save tool (used after agent completes)
+def save_to_txt(data: str, filename: str = "research_output.txt"):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    formatted_text = f"--- Research Output ---\nTimestamp: {timestamp}\n\n{data}\n\n"
+    with open(filename, "a", encoding="utf-8") as f:
+        f.write(formatted_text)
+    return f"✅ Data successfully saved to {filename}"
+
+save_tool = Tool(
+    name="save_text_to_file",
+    func=save_to_txt,
+    description="Saves structured research data to a text file."
+)
+
+# ============================
+# 🤖 5. Agent Creation
+# ============================
+tools = [search_tool, wiki_tool]
 agent = create_tool_calling_agent(
     llm=llm,
     prompt=prompt,
-    tools = tools
+    tools=tools
 )
 
+executor = AgentExecutor(agent=agent, tools=tools, verbose=True, max_iterations=5)
 
-### Building Agent
+# ============================
+# 🧪 6. Run Interaction
+# ============================
+query = input("What can I help you research? ")
 
-agent = create_tool_calling_agent(
-    llm=llm,
-    prompt=prompt,
-    tools = tools
-)
+raw_response = executor.invoke({"query": query})
 
-AgentExecutor = AgentExecutor(agent=agent, tools=[], verose=True)
-query = input("What Can I help you Research?")
-raw_response = AgentExecutor.invoke({"query": query})
-
-try: 
-    structured_response = parser.parse(raw_response["output"])
-    print(structured_response)
+# ============================
+# 🧭 7. Parse Output Safely
+# ============================
+try:
+    structured_response = parser.parse(raw_response.get("output", ""))
+    print("\n✅ Parsed Structured Response:\n", structured_response)
 except Exception as e:
-    print("Error parsing response", e. raw_response)
+    print("\n❌ Error parsing response:", e)
+    print("📝 Raw Output:\n", raw_response.get("output", ""))
 
-##print(raw_response)
-output_text = raw_response["output"]
-####llm = ChatAnthropic(model ="claude-3-5-sonnet-20241022")
-#response = llm.predict("Who is better test batsman between kohli and williamson.")
-#print(response)
-
-### Building Prompt Template
-
-### Printing only the class output
-
-#structured_response = parser.parse(output_text)  
-#print(structured_response)
+# ============================
+# 💾 8. Optional Save to File
+# ============================
+save_choice = input("\nDo you want to save the response to a file? (y/n): ").strip().lower()
+if save_choice == "y":
+    save_result = save_to_txt(raw_response.get("output", ""))
+    print(save_result)
+else:
+    print("❎ Skipping file save.")
